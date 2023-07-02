@@ -5,9 +5,43 @@ import styles from '@/styles/Form.module.css';
 import Image from 'next/image';
 import { HiFingerPrint, HiAtSymbol } from 'react-icons/hi';
 import { useState } from 'react';
+import { useFormik } from 'formik';
+
+import { useSession, signIn, signOut } from 'next-auth/react';
+import login_validate from '@/lib/validate';
+
+import { useRouter } from 'next/router';
 
 export default function Login() {
     const [show, setShow] = useState(false);
+    const router = useRouter()
+
+    const formik = useFormik({
+        initialValues: {
+            email: '',
+            password: '',
+        },
+        onSubmit,
+        validate: login_validate,
+    });
+
+    async function onSubmit(values) {
+        const status = await signIn('credentials', {
+            redirect: false,
+            email: values.email,
+            password: values.password,
+            callbackUrl: '/',
+        });
+        console.log(status);
+
+        if(status.ok){
+            router.push(status.url)
+        }
+    }
+
+    async function handleGoogleSignIn() {
+        signIn('google', { callbackUrl: 'http://localhost:3000' });
+    }
 
     return (
         <Layout>
@@ -24,24 +58,46 @@ export default function Login() {
                     </p>
                 </div>
                 {/* form */}
-                <form className='flex flex-col gap-5'>
-                    <div className={styles.input_group}>
+                <form
+                    className='flex flex-col gap-5'
+                    onSubmit={formik.handleSubmit}
+                >
+                    <div
+                        className={`${styles.input_group} ${
+                            formik.errors.email && formik.touched.email ? (
+                                'border-rose-600'
+                            ) : (
+                                <></>
+                            )
+                        }`}
+                    >
                         <input
                             className={styles.input_text}
                             type='email'
                             name='email'
                             placeholder='Email'
+                            {...formik.getFieldProps('email')}
                         />
                         <span className='icon flex items-center px-4'>
                             <HiAtSymbol size={25} />
                         </span>
                     </div>
-                    <div className={styles.input_group}>
+                    <div
+                        className={`${styles.input_group} ${
+                            formik.errors.password &&
+                            formik.touched.password ? (
+                                'border-rose-600'
+                            ) : (
+                                <></>
+                            )
+                        }`}
+                    >
                         <input
                             className={styles.input_text}
                             type={`${show ? 'text' : 'password'}`}
                             name='password'
                             placeholder='Password'
+                            {...formik.getFieldProps('password')}
                         />
                         <span
                             onClick={() => setShow(!show)}
@@ -56,7 +112,11 @@ export default function Login() {
                         </button>
                     </div>
                     <div className='input-button'>
-                        <button className={styles.button_custom} type='button'>
+                        <button
+                            onClick={handleGoogleSignIn}
+                            className={styles.button_custom}
+                            type='button'
+                        >
                             <Image
                                 src={'/assets/google.svg'}
                                 width={20}
